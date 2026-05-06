@@ -1,18 +1,25 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Header } from "@/components/Header";
 import { SearchBar } from "@/components/SearchBar";
 import { ExamplePackages } from "@/components/ExamplePackages";
 import { DependencyGraph } from "@/components/DependencyGraph";
-import { buildGraph } from "@/lib/npm";
-import type { PackageGraph } from "@/lib/types";
+import { NodeTooltip } from "@/components/NodeTooltip";
+import { buildGraph, expandNode } from "@/lib/npm";
+import type { PackageGraph, PackageNode } from "@/lib/types";
 
 export default function Home() {
   const [pkg, setPkg] = useState<string>("");
   const [graph, setGraph] = useState<PackageGraph | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [hover, setHover] = useState<{ node: PackageNode | null; x: number; y: number }>({
+    node: null,
+    x: 0,
+    y: 0,
+  });
+  const [expandingId, setExpandingId] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [size, setSize] = useState({ width: 1024, height: 640 });
 
@@ -33,6 +40,7 @@ export default function Home() {
     setLoading(true);
     setError(null);
     setGraph(null);
+    setHover({ node: null, x: 0, y: 0 });
     buildGraph(pkg, { signal: ctrl.signal })
       .then((g) => setGraph(g))
       .catch((e: unknown) => {
@@ -42,6 +50,30 @@ export default function Home() {
       .finally(() => setLoading(false));
     return () => ctrl.abort();
   }, [pkg]);
+
+  const handleClickNode = useCallback(
+    async (node: PackageNode) => {
+      if (!graph) return;
+      if (node.expanded || node.dependencies.length === 0) return;
+      setExpandingId(node.id);
+      try {
+        const next = await expandNode(graph, node);
+        setGraph(next);
+      } catch {
+        // ignore — leave node un-expanded
+      } finally {
+        setExpandingId(null);
+      }
+    },
+    [graph]
+  );
+
+  const handleHover = useCallback(
+    (node: PackageNode | null, x: number, y: number) => {
+      setHover({ node, x, y });
+    },
+    []
+  );
 
   return (
     <main className="min-h-dvh flex flex-col">
@@ -73,7 +105,22 @@ export default function Home() {
             className="relative rounded-xl border border-[#18181b] graph-bg h-[480px] sm:h-[640px] overflow-hidden"
           >
             {graph && !loading && !error && (
-              <DependencyGraph graph={graph} width={size.width} height={size.height} />
+              <>
+                <DependencyGraph
+                  graph={graph}
+                  width={size.width}
+                  height={size.height}
+                  expandingId={expandingId}
+                  onHover={handleHover}
+                  onClickNode={handleClickNode}
+                />
+                <NodeTooltip
+                  node={hover.node}
+                  x={hover.x}
+                  y={hover.y}
+                  containerWidth={size.width}
+                />
+              </>
             )}
             {loading && (
               <div className="absolute inset-0 grid place-items-center text-[#71717a] text-sm">
@@ -84,7 +131,7 @@ export default function Home() {
               </div>
             )}
             {!loading && error && (
-              <div className="absolute inset-0 grid place-items-center text-[#fca5a5] text-sm">
+              <div className="absolute inset-0 grid place-items-center text-[#fca5a5] text-sm px-6 text-center">
                 {error}
               </div>
             )}

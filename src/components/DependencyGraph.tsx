@@ -6,18 +6,35 @@ import type { PackageGraph, PackageNode, PackageLink } from "@/lib/types";
 import { nodeColor, nodeRadius } from "@/lib/graph";
 
 type SimNode = d3.SimulationNodeDatum & PackageNode;
-type SimLink = d3.SimulationLinkDatum<SimNode> & { source: string | SimNode; target: string | SimNode };
+type SimLink = d3.SimulationLinkDatum<SimNode> & {
+  source: string | SimNode;
+  target: string | SimNode;
+};
 
 interface Props {
   graph: PackageGraph;
   width: number;
   height: number;
+  expandingId?: string | null;
+  onHover?: (node: PackageNode | null, screenX: number, screenY: number) => void;
+  onClickNode?: (node: PackageNode) => void;
 }
 
-export function DependencyGraph({ graph, width, height }: Props) {
+export function DependencyGraph({
+  graph,
+  width,
+  height,
+  expandingId,
+  onHover,
+  onClickNode,
+}: Props) {
   const svgRef = useRef<SVGSVGElement | null>(null);
   const positionsRef = useRef<Map<string, { x: number; y: number; vx?: number; vy?: number }>>(new Map());
   const simRef = useRef<d3.Simulation<SimNode, SimLink> | null>(null);
+  const onHoverRef = useRef(onHover);
+  const onClickRef = useRef(onClickNode);
+  onHoverRef.current = onHover;
+  onClickRef.current = onClickNode;
 
   const { simNodes, simLinks } = useMemo(() => {
     const positions = positionsRef.current;
@@ -63,7 +80,10 @@ export function DependencyGraph({ graph, width, height }: Props) {
       .selectAll<SVGGElement, SimNode>("g.node")
       .data(simNodes, (d) => d.id)
       .join("g")
-      .attr("class", "node");
+      .attr("class", "node")
+      .style("cursor", (d) =>
+        d.expanded || d.dependencies.length === 0 ? "default" : "pointer"
+      );
 
     nodeSel
       .filter((d) => d.depth === 0)
@@ -74,6 +94,16 @@ export function DependencyGraph({ graph, width, height }: Props) {
       .attr("stroke", "#a78bfa")
       .attr("stroke-width", 2)
       .attr("stroke-opacity", 0.55);
+
+    nodeSel
+      .filter((d) => d.id === expandingId)
+      .append("circle")
+      .attr("class", "loading-ring")
+      .attr("r", (d) => nodeRadius(d) + 4)
+      .attr("fill", "none")
+      .attr("stroke", "#a78bfa")
+      .attr("stroke-width", 2)
+      .attr("stroke-dasharray", "4 4");
 
     nodeSel
       .append("circle")
@@ -97,7 +127,29 @@ export function DependencyGraph({ graph, width, height }: Props) {
       .attr("stroke", "#09090b")
       .attr("stroke-width", 3)
       .attr("stroke-linejoin", "round")
-      .text((d) => (d.name.length > 20 ? d.name.slice(0, 18) + "…" : d.name));
+      .text((d) =>
+        d.name.length > 20 ? d.name.slice(0, 18) + "…" : d.name
+      );
+
+    nodeSel
+      .on("mouseenter", function (event: MouseEvent, d) {
+        d3.select(this).select(".node-circle").attr("stroke", "#fafafa");
+        const rect = svgRef.current!.getBoundingClientRect();
+        onHoverRef.current?.(d, event.clientX - rect.left, event.clientY - rect.top);
+      })
+      .on("mousemove", function (event: MouseEvent, d) {
+        const rect = svgRef.current!.getBoundingClientRect();
+        onHoverRef.current?.(d, event.clientX - rect.left, event.clientY - rect.top);
+      })
+      .on("mouseleave", function (_event: MouseEvent, d) {
+        d3.select(this)
+          .select(".node-circle")
+          .attr("stroke", d.depth === 0 ? "#ddd6fe" : "#09090b");
+        onHoverRef.current?.(null, 0, 0);
+      })
+      .on("click", function (_event: MouseEvent, d) {
+        onClickRef.current?.(d);
+      });
 
     const sim = d3
       .forceSimulation<SimNode, SimLink>(simNodes)
@@ -137,7 +189,7 @@ export function DependencyGraph({ graph, width, height }: Props) {
         }
       });
     };
-  }, [simNodes, simLinks, width, height]);
+  }, [simNodes, simLinks, width, height, expandingId]);
 
   return (
     <svg
