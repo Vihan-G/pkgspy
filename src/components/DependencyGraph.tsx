@@ -64,6 +64,26 @@ export function DependencyGraph({
 
     const g = svg.append("g").attr("class", "viewport");
 
+    const zoom = d3
+      .zoom<SVGSVGElement, unknown>()
+      .scaleExtent([0.25, 4])
+      .filter((event: Event) => {
+        // Allow wheel + touch + drag-on-empty-space; block right-click
+        const me = event as MouseEvent;
+        if (me.type === "mousedown" && me.button !== 0) return false;
+        return true;
+      })
+      .on("zoom", (event: d3.D3ZoomEvent<SVGSVGElement, unknown>) => {
+        g.attr("transform", event.transform.toString());
+      });
+
+    svg.call(zoom);
+    svg.on("dblclick.zoom", null);
+    svg.on("dblclick", (event: MouseEvent) => {
+      event.preventDefault();
+      svg.transition().duration(450).call(zoom.transform, d3.zoomIdentity);
+    });
+
     const linkSel = g
       .append("g")
       .attr("class", "links")
@@ -150,6 +170,30 @@ export function DependencyGraph({
       .on("click", function (_event: MouseEvent, d) {
         onClickRef.current?.(d);
       });
+
+    const drag = d3
+      .drag<SVGGElement, SimNode>()
+      .on("start", (event, d) => {
+        if (!event.active) simRef.current?.alphaTarget(0.3).restart();
+        d.fx = d.x;
+        d.fy = d.y;
+      })
+      .on("drag", (event, d) => {
+        d.fx = event.x;
+        d.fy = event.y;
+      })
+      .on("end", (event, d) => {
+        if (!event.active) simRef.current?.alphaTarget(0);
+        if (d.depth !== 0) {
+          d.fx = null;
+          d.fy = null;
+        } else {
+          d.fx = width / 2;
+          d.fy = height / 2;
+        }
+      });
+
+    nodeSel.call(drag);
 
     const sim = d3
       .forceSimulation<SimNode, SimLink>(simNodes)
