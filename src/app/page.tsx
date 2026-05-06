@@ -8,6 +8,8 @@ import { DependencyGraph } from "@/components/DependencyGraph";
 import { NodeTooltip } from "@/components/NodeTooltip";
 import { PackageStats } from "@/components/PackageStats";
 import { SizeBreakdown } from "@/components/SizeBreakdown";
+import { SizeLegend } from "@/components/SizeLegend";
+import { LoadingGraph } from "@/components/LoadingGraph";
 import { buildGraph, expandNode } from "@/lib/npm";
 import type { PackageGraph, PackageNode } from "@/lib/types";
 
@@ -102,6 +104,7 @@ export default function Home() {
 
       <section className="flex-1 px-4 sm:px-6 pb-12">
         <div className="mx-auto max-w-7xl grid gap-4 lg:grid-cols-[1fr_320px]">
+          <div className="flex flex-col gap-3">
           <div
             ref={containerRef}
             className="relative rounded-xl border border-[#18181b] graph-bg h-[480px] sm:h-[640px] overflow-hidden"
@@ -124,24 +127,37 @@ export default function Home() {
                 />
               </>
             )}
-            {loading && (
-              <div className="absolute inset-0 grid place-items-center text-[#71717a] text-sm">
-                <div className="flex items-center gap-2">
-                  <span className="inline-block w-4 h-4 border-2 border-[#a78bfa]/30 border-t-[#a78bfa] rounded-full spin-slow" />
-                  fetching {pkg}…
+            {loading && <LoadingGraph packageName={pkg} />}
+            {!loading && error && (
+              <div className="absolute inset-0 grid place-items-center px-6 text-center">
+                <div className="max-w-md flex flex-col items-center gap-2">
+                  <span
+                    aria-hidden
+                    className="grid place-items-center w-10 h-10 rounded-full bg-[#1f1416] border border-[#3f1f24] text-[#fca5a5]"
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="12" r="10" />
+                      <path d="M12 8v5" />
+                      <path d="M12 17h.01" />
+                    </svg>
+                  </span>
+                  <div className="text-[14px] text-[#fafafa] font-medium">Couldn&rsquo;t resolve that package</div>
+                  <div className="text-[12.5px] text-[#a1a1aa]">{error}</div>
                 </div>
               </div>
             )}
-            {!loading && error && (
-              <div className="absolute inset-0 grid place-items-center text-[#fca5a5] text-sm px-6 text-center">
-                {error}
-              </div>
-            )}
             {!loading && !graph && !error && (
-              <div className="absolute inset-0 grid place-items-center text-[#52525b] text-sm">
+              <div className="absolute inset-0 grid place-items-center text-[#52525b] text-sm px-6 text-center">
                 Type a package or pick a popular one to see its dependency graph.
               </div>
             )}
+          </div>
+            <div className="px-1">
+              <SizeLegend />
+            </div>
+            <p className="text-[11.5px] text-[#52525b] px-1 hidden sm:block">
+              Tip: drag nodes · scroll to zoom · double-click empty space to reset · click a node to expand its deps
+            </p>
           </div>
 
           <aside className="flex flex-col gap-4">

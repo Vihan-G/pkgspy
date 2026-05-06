@@ -108,7 +108,9 @@ export async function buildGraph(
   ]);
 
   if (!rootDeps && !rootSize) {
-    throw new Error(`No package found for "${cleanName}".`);
+    throw new Error(
+      `No package found for "${cleanName}". Check the spelling — or it may be private.`
+    );
   }
 
   const rootVersion = rootDeps?.version ?? "latest";
