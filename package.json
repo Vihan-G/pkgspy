@@ -1,6 +1,6 @@
 {
-  "name": "pkgspy-app",
-  "version": "0.1.0",
+  "name": "pkgspy",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
