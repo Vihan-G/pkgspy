@@ -6,6 +6,8 @@ import { SearchBar } from "@/components/SearchBar";
 import { ExamplePackages } from "@/components/ExamplePackages";
 import { DependencyGraph } from "@/components/DependencyGraph";
 import { NodeTooltip } from "@/components/NodeTooltip";
+import { PackageStats } from "@/components/PackageStats";
+import { SizeBreakdown } from "@/components/SizeBreakdown";
 import { buildGraph, expandNode } from "@/lib/npm";
 import type { PackageGraph, PackageNode } from "@/lib/types";
 
@@ -99,7 +101,7 @@ export default function Home() {
       </section>
 
       <section className="flex-1 px-4 sm:px-6 pb-12">
-        <div className="mx-auto max-w-7xl">
+        <div className="mx-auto max-w-7xl grid gap-4 lg:grid-cols-[1fr_320px]">
           <div
             ref={containerRef}
             className="relative rounded-xl border border-[#18181b] graph-bg h-[480px] sm:h-[640px] overflow-hidden"
@@ -141,6 +143,19 @@ export default function Home() {
               </div>
             )}
           </div>
+
+          <aside className="flex flex-col gap-4">
+            {graph && !loading && !error ? (
+              <>
+                <PackageStats graph={graph} />
+                <SizeBreakdown graph={graph} />
+              </>
+            ) : (
+              <div className="rounded-xl border border-dashed border-[#27272a] p-5 text-[12.5px] text-[#52525b]">
+                Stats &amp; size breakdown will appear here once a package is loaded.
+              </div>
+            )}
+          </aside>
         </div>
       </section>
     </main>
