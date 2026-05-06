@@ -10,6 +10,7 @@ import { PackageStats } from "@/components/PackageStats";
 import { SizeBreakdown } from "@/components/SizeBreakdown";
 import { SizeLegend } from "@/components/SizeLegend";
 import { LoadingGraph } from "@/components/LoadingGraph";
+import { Footer } from "@/components/Footer";
 import { buildGraph, expandNode } from "@/lib/npm";
 import type { PackageGraph, PackageNode } from "@/lib/types";
 
@@ -174,6 +175,8 @@ export default function Home() {
           </aside>
         </div>
       </section>
+
+      <Footer />
     </main>
   );
 }
